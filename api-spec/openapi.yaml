@@ -1,0 +1,907 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: LeadMiner AI API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dashboard
+    description: Dashboard summary
+  - name: businesses
+    description: Business record operations
+  - name: searches
+    description: Search session operations
+  - name: logs
+    description: Application logs
+  - name: settings
+    description: Application settings
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      description: Returns aggregated counts and recent activity for the dashboard
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /businesses:
+    get:
+      operationId: listBusinesses
+      tags: [businesses]
+      summary: List businesses
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 25 }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: country
+          in: query
+          schema: { type: string }
+        - name: hasEmail
+          in: query
+          schema: { type: boolean }
+        - name: hasWebsite
+          in: query
+          schema: { type: boolean }
+        - name: sortBy
+          in: query
+          schema: { type: string, default: "createdAt" }
+        - name: sortOrder
+          in: query
+          schema: { type: string, enum: [asc, desc], default: "desc" }
+      responses:
+        "200":
+          description: Paginated list of businesses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusinessList"
+    post:
+      operationId: createBusiness
+      tags: [businesses]
+      summary: Create a business record manually
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessInput"
+      responses:
+        "201":
+          description: Created business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+
+  /businesses/{id}:
+    get:
+      operationId: getBusiness
+      tags: [businesses]
+      summary: Get a single business record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Business record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateBusiness
+      tags: [businesses]
+      summary: Update a business record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessUpdate"
+      responses:
+        "200":
+          description: Updated business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteBusiness
+      tags: [businesses]
+      summary: Delete a business record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /businesses/export:
+    post:
+      operationId: exportBusinesses
+      tags: [businesses]
+      summary: Export businesses to a file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportRequest"
+      responses:
+        "200":
+          description: Export file content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResult"
+
+  /searches:
+    get:
+      operationId: listSearches
+      tags: [searches]
+      summary: List past search sessions
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Paginated search sessions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchSessionList"
+    post:
+      operationId: createSearch
+      tags: [searches]
+      summary: Start a new search session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchInput"
+      responses:
+        "201":
+          description: Created search session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchSession"
+
+  /searches/{id}:
+    get:
+      operationId: getSearch
+      tags: [searches]
+      summary: Get a search session with its results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Search session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchSession"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /searches/{id}/cancel:
+    post:
+      operationId: cancelSearch
+      tags: [searches]
+      summary: Cancel a running search
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Cancelled session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchSession"
+
+  /logs:
+    get:
+      operationId: listLogs
+      tags: [logs]
+      summary: List application logs
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: level
+          in: query
+          schema: { type: string, enum: [info, warning, error, debug] }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogList"
+    delete:
+      operationId: clearLogs
+      tags: [logs]
+      summary: Delete all logs
+      responses:
+        "204":
+          description: Cleared
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get application settings
+      responses:
+        "200":
+          description: Settings object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update application settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalBusinesses:
+          type: integer
+        totalSearches:
+          type: integer
+        businessesWithEmail:
+          type: integer
+        businessesWithWebsite:
+          type: integer
+        lastSearchAt:
+          type: ["string", "null"]
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+        categoryBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        dailyGrowth:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyGrowth"
+      required:
+        - totalBusinesses
+        - totalSearches
+        - businessesWithEmail
+        - businessesWithWebsite
+        - lastSearchAt
+        - recentActivity
+        - categoryBreakdown
+        - dailyGrowth
+
+    ActivityItem:
+      type: object
+      properties:
+        type:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+      required:
+        - type
+        - message
+        - timestamp
+
+    CategoryCount:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+      required:
+        - category
+        - count
+
+    DailyGrowth:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+      required:
+        - date
+        - count
+
+    Business:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: ["string", "null"]
+        subcategory:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        district:
+          type: ["string", "null"]
+        street:
+          type: ["string", "null"]
+        postalCode:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        mapsUrl:
+          type: ["string", "null"]
+        facebook:
+          type: ["string", "null"]
+        instagram:
+          type: ["string", "null"]
+        linkedin:
+          type: ["string", "null"]
+        x:
+          type: ["string", "null"]
+        youtube:
+          type: ["string", "null"]
+        tiktok:
+          type: ["string", "null"]
+        pinterest:
+          type: ["string", "null"]
+        threads:
+          type: ["string", "null"]
+        rating:
+          type: ["number", "null"]
+        reviewCount:
+          type: ["integer", "null"]
+        openingHours:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        sources:
+          type: ["string", "null"]
+        searchSessionId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+
+    BusinessInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category:
+          type: string
+        subcategory:
+          type: string
+        description:
+          type: string
+        country:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        street:
+          type: string
+        postalCode:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        mapsUrl:
+          type: string
+        facebook:
+          type: string
+        instagram:
+          type: string
+        linkedin:
+          type: string
+        x:
+          type: string
+        youtube:
+          type: string
+        tiktok:
+          type: string
+        pinterest:
+          type: string
+        threads:
+          type: string
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+        openingHours:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+        sources:
+          type: string
+        searchSessionId:
+          type: integer
+      required:
+        - name
+
+    BusinessUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        category:
+          type: string
+        subcategory:
+          type: string
+        description:
+          type: string
+        country:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        street:
+          type: string
+        postalCode:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        mapsUrl:
+          type: string
+        facebook:
+          type: string
+        instagram:
+          type: string
+        linkedin:
+          type: string
+        x:
+          type: string
+        youtube:
+          type: string
+        tiktok:
+          type: string
+        pinterest:
+          type: string
+        threads:
+          type: string
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+        openingHours:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+        sources:
+          type: string
+
+    BusinessList:
+      type: object
+      properties:
+        businesses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Business"
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - businesses
+        - total
+        - page
+        - pageSize
+        - totalPages
+
+    ExportRequest:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [csv, json, xlsx]
+        businessIds:
+          type: array
+          items:
+            type: integer
+        includeNotes:
+          type: boolean
+          default: true
+        includeSources:
+          type: boolean
+          default: true
+        includeEmptyFields:
+          type: boolean
+          default: false
+      required:
+        - format
+
+    ExportResult:
+      type: object
+      properties:
+        content:
+          type: string
+        filename:
+          type: string
+        format:
+          type: string
+        recordCount:
+          type: integer
+      required:
+        - content
+        - filename
+        - format
+        - recordCount
+
+    SearchSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        keyword:
+          type: string
+        country:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        postalCode:
+          type: ["string", "null"]
+        radius:
+          type: ["integer", "null"]
+        category:
+          type: ["string", "null"]
+        maxResults:
+          type: integer
+        language:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, running, completed, cancelled, failed]
+        businessesFound:
+          type: integer
+        businessesSaved:
+          type: integer
+        startedAt:
+          type: ["string", "null"]
+        finishedAt:
+          type: ["string", "null"]
+        durationSeconds:
+          type: ["integer", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - keyword
+        - status
+        - businessesFound
+        - businessesSaved
+        - createdAt
+
+    SearchSessionList:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchSession"
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - sessions
+        - total
+        - page
+        - pageSize
+        - totalPages
+
+    SearchInput:
+      type: object
+      properties:
+        keyword:
+          type: string
+          minLength: 1
+        country:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+          minLength: 1
+        postalCode:
+          type: string
+        radius:
+          type: integer
+        category:
+          type: string
+        maxResults:
+          type: integer
+          default: 20
+        language:
+          type: string
+      required:
+        - keyword
+        - city
+
+    LogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        level:
+          type: string
+          enum: [info, warning, error, debug]
+        module:
+          type: string
+        message:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - level
+        - module
+        - message
+        - createdAt
+
+    LogList:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - logs
+        - total
+        - page
+        - pageSize
+        - totalPages
+
+    Settings:
+      type: object
+      properties:
+        language:
+          type: string
+        theme:
+          type: string
+          enum: [light, dark, system]
+        exportFolder:
+          type: string
+        maxResults:
+          type: integer
+        requestDelay:
+          type: integer
+        requestTimeout:
+          type: integer
+        headlessMode:
+          type: boolean
+        cacheEnabled:
+          type: boolean
+        loggingEnabled:
+          type: boolean
+        logLevel:
+          type: string
+          enum: [debug, info, warning, error]
+      required:
+        - language
+        - theme
+        - maxResults
+        - requestDelay
+        - requestTimeout
+        - headlessMode
+        - cacheEnabled
+        - loggingEnabled
+        - logLevel
+
+    SettingsUpdate:
+      type: object
+      properties:
+        language:
+          type: string
+        theme:
+          type: string
+          enum: [light, dark, system]
+        exportFolder:
+          type: string
+        maxResults:
+          type: integer
+        requestDelay:
+          type: integer
+        requestTimeout:
+          type: integer
+        headlessMode:
+          type: boolean
+        cacheEnabled:
+          type: boolean
+        loggingEnabled:
+          type: boolean
+        logLevel:
+          type: string
+          enum: [debug, info, warning, error]
